@@ -24,22 +24,71 @@ export default function Home() {
     const [refreshKey, setRefreshKey] = useState(0);
 
     const fetchUsers = useCallback(async () => {
-        const params = new URLSearchParams({
-            search: searchTerm,
-            page: pagination.currentPage.toString(),
-            pageSize: pagination.pageSize.toString()
-        });
+        setIsLoading(true);
+        try {
+            const result = await getUsersAction(searchTerm, pagination.currentPage, pagination.pageSize);
 
-        const response = await fetch(`/api/users?${params}`);
-        const data = await response.json();
-
-        setUsers(data.users);
-        setPagination(prev => ({
-            ...prev,
-            totalPages: data.pagination.totalPages,
-            currentPage: data.pagination.currentPage
-        }));
+            if (result.success && result.data) {
+                setUsers(result.data.users);
+                setPagination(prev => ({
+                    ...prev,
+                    totalPages: result.data!.pagination.totalPages,
+                    currentPage: result.data!.pagination.currentPage,
+                    totalUsers: result.data!.pagination.totalUsers,
+                }));
+            } else {
+                console.error('Failed to fetch users:', result.error);
+                // You could show a toast notification here
+                alert(result.error || 'Failed to fetch users');
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            alert('An unexpected error occurred while fetching users');
+        } finally {
+            setIsLoading(false);
+        }
     }, [searchTerm, pagination.currentPage, pagination.pageSize]);
+
+    const [notification, setNotification] = useState<{
+        show: boolean;
+        message: string;
+        type: 'success' | 'error' | 'info';
+    }>({ show: false, message: '', type: 'info' });
+
+    // Helper to show notifications
+    const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setNotification({ show: true, message, type });
+        setTimeout(() => {
+            setNotification({ show: false, message: '', type: 'info' });
+        }, 5000);
+    };
+
+    // Update the delete handler
+    const confirmDelete = async () => {
+        if (deleteConfirm.userIds) {
+            startTransition(async () => {
+                try {
+                    const result = await deleteUsersAction(deleteConfirm.userIds!);
+                    if (result.success) {
+                        setSelectedUsers(prev => prev.filter(id => !deleteConfirm.userIds!.includes(id)));
+                        showNotification(
+                            `Successfully deleted ${result.data?.deletedCount || deleteConfirm.userIds!.length} user(s)`,
+                            'success'
+                        );
+                        fetchUsers();
+                    } else {
+                        showNotification(result.error || 'Failed to delete users', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting users:', error);
+                    showNotification('Failed to delete users', 'error');
+                }
+            });
+        }
+        setDeleteConfirm({ isOpen: false });
+    };
+
+
 
     useEffect(() => {
         fetchUsers();

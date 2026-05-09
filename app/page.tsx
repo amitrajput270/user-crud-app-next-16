@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useTransition, use } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { User, UserFormData, PaginationState } from '@/types/user';
 import SearchBar from '@/components/SearchBar';
 import UserTable from '@/components/UserTable';
 import UserForm from '@/components/UserForm';
 import Pagination from '@/components/Pagination';
 import AlertDialog from '@/components/AlertDialog';
+import Toast from '@/components/Toast';
 import { exportToCSV, parseCSVFile } from '@/lib/csv';
 import { getUsersAction, deleteUsersAction, importUsersAction } from '@/lib/actions';
 
@@ -16,7 +17,9 @@ export default function Home() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userIds?: string[] }>({ isOpen: false });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userIds?: string[] }>({
+    isOpen: false
+  });
   const [pagination, setPagination] = useState<PaginationState>({
     currentPage: 1,
     totalPages: 1,
@@ -25,20 +28,38 @@ export default function Home() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({ show: false, message: '', type: 'info' });
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ show: true, message, type });
+  };
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getUsersAction(searchTerm, pagination.currentPage, pagination.pageSize);
+
+      // Now TypeScript knows the exact structure
       setUsers(data.users);
-      setPagination(prev => ({
-        ...prev,
-        totalPages: data.pagination.totalPages,
+      setPagination({
         currentPage: data.pagination.currentPage,
-        totalUsers: data.pagination.totalUsers
-      }));
+        totalPages: data.pagination.totalPages,
+        pageSize: data.pagination.pageSize,
+        totalUsers: data.pagination.totalUsers,
+      });
     } catch (error) {
       console.error('Error fetching users:', error);
+      showNotification('An unexpected error occurred while fetching users', 'error');
+      // Set empty state on error
+      setUsers([]);
+      setPagination(prev => ({
+        ...prev,
+        totalUsers: 0,
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -56,29 +77,40 @@ export default function Home() {
   const handleFormSuccess = () => {
     setEditingUser(null);
     fetchUsers();
+    showNotification('User saved successfully', 'success');
   };
 
-  const handleDeleteUsers = async (userIds: string[]) => {
+  const handleDeleteUsers = (userIds: string[]) => {
     setDeleteConfirm({ isOpen: true, userIds });
   };
 
   const confirmDelete = async () => {
-    if (deleteConfirm.userIds) {
+    if (deleteConfirm.userIds && deleteConfirm.userIds.length > 0) {
       startTransition(async () => {
         try {
-          await deleteUsersAction(deleteConfirm.userIds!);
-          setSelectedUsers(prev => prev.filter(id => !deleteConfirm.userIds!.includes(id)));
-          fetchUsers();
+          const result = await deleteUsersAction(deleteConfirm.userIds!);
+          if (result.success) {
+            setSelectedUsers(prev => prev.filter(id => !deleteConfirm.userIds!.includes(id)));
+            const deletedCount = result.data?.deletedCount || deleteConfirm.userIds!.length;
+            showNotification(`Successfully deleted ${deletedCount} user(s)`, 'success');
+            fetchUsers();
+          } else {
+            showNotification(result.error || 'Failed to delete users', 'error');
+          }
         } catch (error) {
           console.error('Error deleting users:', error);
+          showNotification('Failed to delete users', 'error');
         }
       });
     }
-    setDeleteConfirm({ isOpen: false });
+    setDeleteConfirm({ isOpen: false, userIds: undefined });
   };
 
   const handleDeleteSelected = () => {
-    if (selectedUsers.length === 0) return;
+    if (selectedUsers.length === 0) {
+      showNotification('Please select users to delete', 'info');
+      return;
+    }
     handleDeleteUsers(selectedUsers);
   };
 
@@ -102,7 +134,14 @@ export default function Home() {
     const usersToExport = selectedUsers.length > 0
       ? users.filter(user => selectedUsers.includes(user.id))
       : users;
+
+    if (usersToExport.length === 0) {
+      showNotification('No users to export', 'info');
+      return;
+    }
+
     exportToCSV(usersToExport);
+    showNotification(`Exported ${usersToExport.length} user(s) to CSV`, 'success');
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,21 +150,33 @@ export default function Home() {
 
     try {
       const importedUsers = await parseCSVFile(file);
+      if (importedUsers.length === 0) {
+        showNotification('No valid users found in CSV file', 'error');
+        event.target.value = '';
+        return;
+      }
+
       startTransition(async () => {
         try {
-          await importUsersAction(importedUsers);
-          fetchUsers();
+          const result = await importUsersAction(importedUsers);
+          if (result.success) {
+            const message = result.data?.partialError ||
+              `Successfully imported ${result.data?.count || importedUsers.length} user(s)`;
+            showNotification(message, result.data?.partialError ? 'info' : 'success');
+            fetchUsers();
+          } else {
+            showNotification(result.error || 'Failed to import users', 'error');
+          }
         } catch (error) {
           console.error('Error importing users:', error);
-          alert('Failed to import users');
+          showNotification('Failed to import users', 'error');
         }
       });
     } catch (error) {
       console.error('Error parsing CSV:', error);
-      alert('Failed to parse CSV file');
+      showNotification('Failed to parse CSV file. Please check the format.', 'error');
     }
 
-    // Reset file input
     event.target.value = '';
   };
 
@@ -134,26 +185,54 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Users List</h1>
-          <p className="text-gray-600 mt-2">Manage your users with ease</p>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #f9fafb, #f3f4f6)' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
+            Users List
+          </h1>
+          <p style={{ color: '#6b7280' }}>
+            Manage your users with ease
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '0.75rem',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+          padding: '1.5rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            marginBottom: '1.5rem'
+          }}>
             <SearchBar searchTerm={searchTerm} onSearchChange={handleSearch} />
 
-            <div className="flex flex-wrap gap-2">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               <button
                 onClick={() => {
                   setEditingUser(null);
                   setIsFormOpen(true);
                 }}
-                className="btn btn-primary flex items-center gap-2"
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Create User
@@ -162,26 +241,63 @@ export default function Home() {
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedUsers.length === 0 || isPending}
-                className="btn btn-danger flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: 500,
+                  cursor: selectedUsers.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: selectedUsers.length === 0 ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Delete Selected
+                Delete Selected {selectedUsers.length > 0 && `(${selectedUsers.length})`}
               </button>
 
               <button
                 onClick={handleExportCSV}
-                className="btn btn-success flex items-center gap-2"
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#059669',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export CSV
               </button>
 
-              <label className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2 cursor-pointer">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <label style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+              }}>
+                <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 Import CSV
@@ -189,17 +305,32 @@ export default function Home() {
                   type="file"
                   accept=".csv"
                   onChange={handleImportCSV}
-                  className="hidden"
+                  style={{ display: 'none' }}
                   disabled={isPending}
                 />
               </label>
             </div>
           </div>
 
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             {isLoading && (
-              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}>
+                <div style={{
+                  width: '2rem',
+                  height: '2rem',
+                  border: '3px solid #e5e7eb',
+                  borderTopColor: '#2563eb',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
               </div>
             )}
             <UserTable
@@ -215,8 +346,15 @@ export default function Home() {
             />
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div style={{
+            marginTop: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
               {pagination.totalUsers} total users
             </div>
             <Pagination
@@ -240,11 +378,24 @@ export default function Home() {
 
       <AlertDialog
         isOpen={deleteConfirm.isOpen}
-        message="Are you sure you want to delete this user(s)? This action cannot be undone."
+        message={`Are you sure you want to delete ${deleteConfirm.userIds?.length || 0} user(s)? This action cannot be undone.`}
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteConfirm({ isOpen: false })}
+        onCancel={() => setDeleteConfirm({ isOpen: false, userIds: undefined })}
         loading={isPending}
       />
+
+      <Toast
+        show={notification.show}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ show: false, message: '', type: 'info' })}
+      />
+
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
