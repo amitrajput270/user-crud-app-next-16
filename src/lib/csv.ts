@@ -13,9 +13,10 @@ export function exportToCSV(users: User[]): void {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-
+    // random filename with current date, time and rand number to avoid overwriting existing files
+    const filename = `users_${new Date().toISOString()}_${Math.floor(Math.random() * 1000)}.csv`;
     link.setAttribute('href', url);
-    link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
 
     document.body.appendChild(link);

@@ -53,7 +53,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <div style={{ fontSize: '0.875rem', color: '#374151' }}>
+            <div style={{ fontSize: '0.875rem', color: '#374151', marginRight: '0.5rem' }}>
                 Page {currentPage} of {totalPages}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

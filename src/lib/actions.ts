@@ -257,8 +257,7 @@ export async function importUsersAction(users: UserFormData[]): Promise<ActionRe
         }
 
         const result = await User.insertMany(validUsers, {
-            ordered: false,
-            timeout: 30000 // 30 seconds timeout
+            ordered: false
         });
 
         revalidatePath('/');

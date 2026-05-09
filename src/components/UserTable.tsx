@@ -37,7 +37,7 @@ export default function UserTable({
         textAlign: 'left',
         fontSize: '0.75rem',
         fontWeight: 500,
-        color: '#6b7280',
+        color: '#f0f2f5',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
         borderBottom: '1px solid #e5e7eb'
@@ -53,14 +53,14 @@ export default function UserTable({
     return (
         <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
-                <thead style={{ backgroundColor: '#f9fafb' }}>
+                <thead style={{ backgroundColor: '#0d0202de' }}>
                     <tr>
                         <th style={thStyle}>
                             <input
                                 type="checkbox"
                                 onChange={(e) => onSelectAll(e.target.checked)}
                                 checked={users.length > 0 && selectedUsers.length === users.length}
-                                style={{ borderRadius: '0.25rem', borderColor: '#d1d5db' }}
+                                style={{ borderRadius: '0.25rem', borderColor: '#abc0d8' }}
                             />
                         </th>
                         <th style={thStyle}>ID</th>
@@ -98,14 +98,20 @@ export default function UserTable({
                                         style={{ color: '#2563eb', marginRight: '0.5rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
                                         className="hover:text-blue-800"
                                     >
-                                        Edit
+                                        <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        {/* Edit */}
                                     </button>
                                     <button
                                         onClick={() => onDeleteUser(user.id)}
                                         style={{ color: '#dc2626', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
                                         className="hover:text-red-800"
                                     >
-                                        Delete
+                                        <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        {/* Delete */}
                                     </button>
                                 </td>
                             </tr>
