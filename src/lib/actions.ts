@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import dbConnect from './mongodb';
 import User from '@/models/User';
 import { UserFormData, UsersResponse, ActionResponse, User as UserType } from '@/types/user';
+import { handleError } from './error-handler';
 
 function formatValidationError(error: any): string {
     // Handle Mongoose ValidationError
