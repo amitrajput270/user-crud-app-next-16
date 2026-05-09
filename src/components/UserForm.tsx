@@ -8,10 +8,11 @@ interface UserFormProps {
     isOpen: boolean;
     onClose: () => void;
     user?: User | null;
-    onSuccess: () => void;
+    onSuccess?: () => void;
+    onSubmit?: (data: UserFormData) => Promise<void>;
 }
 
-export default function UserForm({ isOpen, onClose, user, onSuccess }: UserFormProps) {
+export default function UserForm({ isOpen, onClose, user, onSuccess, onSubmit }: UserFormProps) {
     const [formData, setFormData] = useState<UserFormData>({ name: '', email: '' });
     const [errors, setErrors] = useState<{ name?: string; email?: string; general?: string }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,16 +56,23 @@ export default function UserForm({ isOpen, onClose, user, onSuccess }: UserFormP
         setErrors({});
 
         try {
-            const result = user
-                ? await updateUserAction(user.id, formData)
-                : await createUserAction(formData);
-
-            if (result.success) {
-                onSuccess();
+            if (onSubmit) {
+                await onSubmit(formData);
+                onSuccess?.();
                 onClose();
                 setFormData({ name: '', email: '' });
             } else {
-                setErrors({ general: result.error || 'An error occurred' });
+                const result = user
+                    ? await updateUserAction(user.id, formData)
+                    : await createUserAction(formData);
+
+                if (result.success) {
+                    onSuccess?.();
+                    onClose();
+                    setFormData({ name: '', email: '' });
+                } else {
+                    setErrors({ general: result.error || 'An error occurred' });
+                }
             }
         } catch (error) {
             console.error('Error saving user:', error);
