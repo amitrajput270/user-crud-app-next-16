@@ -33,7 +33,7 @@ export default function UserForm({ isOpen, onClose, user, onSuccess, onSubmit }:
             newErrors.name = 'Name is required';
         } else if (formData.name.trim().length < 2) {
             newErrors.name = 'Name must be at least 2 characters';
-        } else if (formData.name.trim().length > 100) {
+        } else if (formData.name.trim().length > 50) {
             newErrors.name = 'Name must be less than 100 characters';
         }
 

@@ -51,7 +51,7 @@ export default function UserTable({
     };
 
     return (
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '55vh', overflowY: 'auto' }}>
             <table style={{ width: '100%', backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
                 <thead style={{ backgroundColor: '#0d0202de' }}>
                     <tr>
@@ -63,7 +63,7 @@ export default function UserTable({
                                 style={{ borderRadius: '0.25rem', borderColor: '#abc0d8' }}
                             />
                         </th>
-                        <th style={thStyle}>ID</th>
+                        <th style={thStyle}>S.No</th>
                         <th style={thStyle}>Name</th>
                         <th style={thStyle}>Email</th>
                         <th style={thStyle}>Created At</th>
@@ -88,7 +88,7 @@ export default function UserTable({
                                         style={{ borderRadius: '0.25rem', borderColor: '#d1d5db' }}
                                     />
                                 </td>
-                                <td style={tdStyle}>{user.id}</td>
+                                <td style={tdStyle}>{users.indexOf(user) + 1}</td>
                                 <td style={tdStyle}>{user.name}</td>
                                 <td style={{ ...tdStyle, color: '#4b5563' }}>{user.email}</td>
                                 <td style={{ ...tdStyle, color: '#4b5563' }}>{formatDate(user.createdAt)}</td>

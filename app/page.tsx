@@ -355,7 +355,7 @@ export default function Home() {
             gap: '1rem'
           }}>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              {pagination.totalUsers} total users
+              Total Records: {pagination.totalUsers}
             </div>
             <Pagination
               currentPage={pagination.currentPage}
