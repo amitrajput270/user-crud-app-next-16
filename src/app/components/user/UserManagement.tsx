@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { User, UserFormData, PaginationState } from '@/app/types/user';
-import SearchBar from '@/app/components/SearchBar';
-import UserTable from '@/app/components/UserTable';
-import UserForm from '@/app/components/UserForm';
-import Pagination from '@/app/components/Pagination';
-import AlertDialog from '@/app/components/AlertDialog';
-import Toast from '@/app/components/Toast';
-import { exportToCSV, parseCSVFile } from '@/app/lib/csv';
-import { getUsersAction, deleteUsersAction, importUsersAction } from '@/app/lib/actions';
+import SearchBar from '@/app/components/common/SearchBar';
+import UserTable from '@/app/components/user/UserTable';
+import UserForm from '@/app/components/user/UserForm';
+import Pagination from '@/app/components/common/Pagination';
+import AlertDialog from '@/app/components/common/AlertDialog';
+import Toast from '@/app/components/common/Toast';
+import { exportToCSV, parseCSVFile } from '@/app/lib/common/csv';
+import { getUsersAction, deleteUsersAction, importUsersAction } from '@/app/lib/user-actions';
 
 export default function UserManagement() {
     const [users, setUsers] = useState<User[]>([]);
@@ -139,8 +139,16 @@ export default function UserManagement() {
             showNotification('No users to export', 'info');
             return;
         }
-
-        exportToCSV(usersToExport);
+        exportToCSV({
+            data: usersToExport,
+            filename: `users_${new Date().toISOString()}_${Math.floor(Math.random() * 1000)}.csv`,
+            headers: {
+                id: 'ID',
+                name: 'Name',
+                email: 'Email',
+                createdAt: 'Created At',
+            }
+        });
         showNotification(`Exported ${usersToExport.length} user(s) to CSV`, 'success');
     };
 
@@ -149,7 +157,19 @@ export default function UserManagement() {
         if (!file) return;
 
         try {
-            const importedUsers = await parseCSVFile(file);
+            const importedUsers = await parseCSVFile<UserFormData>(file, {
+                mapping: {
+                    'Name': 'name',
+                    'Email': 'email',
+                },
+                transform: (row) => ({
+                    name: (row.name || row.Name || '').trim(),
+                    email: (row.email || row.Email || '').trim(),
+                }),
+                validate: (user) => {
+                    return !!(user.name && user.email && user.email.includes('@'));
+                }
+            });
             if (importedUsers.length === 0) {
                 showNotification('No valid users found in CSV file', 'error');
                 event.target.value = '';

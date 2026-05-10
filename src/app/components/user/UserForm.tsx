@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, UserFormData } from '@/app/types/user';
-import { createUserAction, updateUserAction } from '@/app/lib/actions';
+import { createUserAction, updateUserAction } from '@/app/lib/user-actions';
 
 interface UserFormProps {
     isOpen: boolean;

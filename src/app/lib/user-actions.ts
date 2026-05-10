@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import dbConnect from './mongodb';
+import dbConnect from './common/mongodb';
 import User from '@/app/models/User';
 import { UserFormData, UsersResponse, ActionResponse, User as UserType } from '@/app/types/user';
-import { handleError } from './error-handler';
+import { handleError } from './common/error-handler';
 
 function formatValidationError(error: any): string {
     // Handle Mongoose ValidationError
