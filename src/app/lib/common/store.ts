@@ -1,4 +1,4 @@
-import { User } from '@/types/user';
+import { User } from '@/app/types/user';
 
 // Using global to persist data across hot reloads in development
 declare global {
