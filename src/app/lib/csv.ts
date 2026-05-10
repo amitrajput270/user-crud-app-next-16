@@ -1,4 +1,4 @@
-import { User, UserFormData } from '@/types/user';
+import { User, UserFormData } from '@/app/types/user';
 import Papa from 'papaparse';
 
 export function exportToCSV(users: User[]): void {

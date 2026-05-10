@@ -1,4 +1,4 @@
-import { User } from '@/types/user';
+import { User } from '@/app/types/user';
 
 export function exportToCSV(users: User[]) {
     const headers = ['ID', 'Name', 'Email', 'Created At'];

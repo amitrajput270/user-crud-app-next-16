@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import dbConnect from './mongodb';
-import User from '@/models/User';
-import { UserFormData, UsersResponse, ActionResponse, User as UserType } from '@/types/user';
+import User from '@/app/models/User';
+import { UserFormData, UsersResponse, ActionResponse, User as UserType } from '@/app/types/user';
 import { handleError } from './error-handler';
 
 function formatValidationError(error: any): string {
@@ -233,15 +233,12 @@ export async function deleteUsersAction(ids: string[]): Promise<ActionResponse<{
 export async function importUsersAction(users: UserFormData[]): Promise<ActionResponse<{ count: number; partialError?: string }>> {
     try {
         await dbConnect();
-
         if (!users || users.length === 0) {
             return {
                 success: false,
                 error: 'No users to import'
             };
         }
-
-        // Filter out invalid users and clean data
         const validUsers = users
             .filter(user => user.name && user.email && /^\S+@\S+\.\S+$/.test(user.email))
             .map(user => ({
@@ -252,47 +249,41 @@ export async function importUsersAction(users: UserFormData[]): Promise<ActionRe
         if (validUsers.length === 0) {
             return {
                 success: false,
-                error: 'No valid users found. Each user must have a valid name and email.'
+                error: 'No valid users found'
             };
         }
-
+        // Use insertMany with ordered: false to skip duplicates
         const result = await User.insertMany(validUsers, {
             ordered: false
         });
-
         revalidatePath('/');
-
         return {
             success: true,
             data: { count: result.length }
         };
     } catch (error: any) {
-        console.error('Error importing users:', error);
-
-        // Handle partial success (some documents inserted before error)
-        if (error.insertedDocs && error.insertedDocs.length > 0) {
-            revalidatePath('/');
-            const failedCount = error.writeErrors?.length || 0;
-            return {
-                success: true,
-                data: {
-                    count: error.insertedDocs.length,
-                    partialError: `Imported ${error.insertedDocs.length} users successfully. ${failedCount} entries failed (possibly duplicates or invalid data).`
-                }
-            };
-        }
-
-        // If it's a duplicate key error with no successful inserts
-        if (error.code === 11000) {
+        // Handle duplicate key errors
+        if (error.name === 'MongoBulkWriteError') {
+            const insertedCount = error.insertedDocs?.length || 0;
+            const duplicateCount = error.writeErrors?.length || 0;
+            if (insertedCount > 0) {
+                revalidatePath('/');
+                return {
+                    success: true,
+                    data: {
+                        count: insertedCount,
+                        partialError: `Imported ${insertedCount} users. ${duplicateCount} skipped (duplicates).`
+                    }
+                };
+            }
             return {
                 success: false,
-                error: 'Import failed: Some emails already exist in the database.'
+                error: `All ${duplicateCount} users already exist in the database.`
             };
         }
-
         return {
             success: false,
-            error: formatValidationError(error)
+            error: 'Failed to import users'
         };
     }
 }

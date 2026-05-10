@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, UserFormData } from '@/types/user';
-import { createUserAction, updateUserAction } from '@/lib/actions';
+import { User, UserFormData } from '@/app/types/user';
+import { createUserAction, updateUserAction } from '@/app/lib/actions';
 
 interface UserFormProps {
     isOpen: boolean;

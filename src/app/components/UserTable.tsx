@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { User } from '@/types/user';
+import { User } from '@/app/types/user';
 
 interface UserTableProps {
     users: User[];
