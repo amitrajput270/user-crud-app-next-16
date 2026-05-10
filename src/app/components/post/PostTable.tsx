@@ -1,26 +1,26 @@
 'use client';
 
 import React from 'react';
-import { User } from '@/app/types/user';
-import { formatDate, formatDateLong, timeAgo } from '@/lib/date-utils';
+import { Post } from '@/app/types/post';
+import { formatDate, timeAgo } from '@/lib/date-utils';
 
-interface UserTableProps {
-    users: User[];
-    selectedUsers: string[];
-    onSelectUser: (id: string) => void;
+interface PostTableProps {
+    posts: Post[];
+    selectedPosts: string[];
+    onSelectPost: (id: string) => void;
     onSelectAll: (checked: boolean) => void;
-    onEditUser: (user: User) => void;
-    onDeleteUser: (id: string) => void;
+    onEditPost: (post: Post) => void;
+    onDeletePost: (id: string) => void;
 }
 
-export default function UserTable({
-    users,
-    selectedUsers,
-    onSelectUser,
+export default function PostTable({
+    posts,
+    selectedPosts,
+    onSelectPost,
     onSelectAll,
-    onEditUser,
-    onDeleteUser
-}: UserTableProps) {
+    onEditPost,
+    onDeletePost
+}: PostTableProps) {
     const thStyle: React.CSSProperties = {
         padding: '0.75rem 1.5rem',
         textAlign: 'left',
@@ -48,42 +48,42 @@ export default function UserTable({
                             <input
                                 type="checkbox"
                                 onChange={(e) => onSelectAll(e.target.checked)}
-                                checked={users.length > 0 && selectedUsers.length === users.length}
+                                checked={posts.length > 0 && selectedPosts.length === posts.length}
                                 style={{ borderRadius: '0.25rem', borderColor: '#abc0d8' }}
                             />
                         </th>
                         <th style={thStyle}>S.No</th>
-                        <th style={thStyle}>Name</th>
-                        <th style={thStyle}>Email</th>
+                        <th style={thStyle}>Title</th>
+                        <th style={thStyle}>Content</th>
                         <th style={thStyle}>Created At</th>
                         <th style={thStyle}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {users.length === 0 ? (
+                    {posts.length === 0 ? (
                         <tr>
                             <td colSpan={6} style={{ padding: '1rem 1.5rem', textAlign: 'center', color: '#6b7280' }}>
-                                No users found
+                                No posts found
                             </td>
                         </tr>
                     ) : (
-                        users.map((user) => (
-                            <tr key={user.id} style={{ borderBottom: '1px solid #e5e7eb' }} className="hover:bg-gray-50">
+                        posts.map((post) => (
+                            <tr key={post.id} style={{ borderBottom: '1px solid #e5e7eb' }} className="hover:bg-gray-50">
                                 <td style={tdStyle}>
                                     <input
                                         type="checkbox"
-                                        checked={selectedUsers.includes(user.id)}
-                                        onChange={() => onSelectUser(user.id)}
+                                        checked={selectedPosts.includes(post.id)}
+                                        onChange={() => onSelectPost(post.id)}
                                         style={{ borderRadius: '0.25rem', borderColor: '#d1d5db' }}
                                     />
                                 </td>
-                                <td style={tdStyle}>{users.indexOf(user) + 1}</td>
-                                <td style={tdStyle}>{user.name}</td>
-                                <td style={{ ...tdStyle, color: '#4b5563' }}>{user.email}</td>
-                                <td style={{ ...tdStyle, color: '#4b5563' }}>{timeAgo(user.createdAt)}</td>
+                                <td style={tdStyle}>{posts.indexOf(post) + 1}</td>
+                                <td style={tdStyle}>{post.title}</td>
+                                <td style={{ ...tdStyle, color: '#4b5563' }}>{post.content}</td>
+                                <td style={{ ...tdStyle, color: '#4b5563' }}>{timeAgo(post.createdAt)}</td>
                                 <td style={tdStyle}>
                                     <button
-                                        onClick={() => onEditUser(user)}
+                                        onClick={() => onEditPost(post)}
                                         style={{ color: '#2563eb', marginRight: '0.5rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
                                         className="hover:text-blue-800"
                                     >
@@ -93,7 +93,7 @@ export default function UserTable({
                                         {/* Edit */}
                                     </button>
                                     <button
-                                        onClick={() => onDeleteUser(user.id)}
+                                        onClick={() => onDeletePost(post.id)}
                                         style={{ color: '#dc2626', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
                                         className="hover:text-red-800"
                                     >

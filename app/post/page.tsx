@@ -1,4 +1,4 @@
-import UserManagement from "@/app/components/user/UserManagement";
+import PostManagement from "@/app/components/post/PostManagement";
 export default function UserPage() {
-    return <UserManagement />;
+    return <PostManagement />;
 }

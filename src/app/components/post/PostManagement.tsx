@@ -1,31 +1,31 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
-import { User, UserFormData, PaginationState } from '@/app/types/user';
+import { Post, PostFormData, PaginationState } from '@/app/types/post';
 import SearchBar from '@/app/components/common/SearchBar';
-import UserTable from '@/app/components/user/UserTable';
-import UserForm from '@/app/components/user/UserForm';
+import PostTable from '@/app/components/post/PostTable';
+import PostForm from '@/app/components/post/PostForm';
 import Pagination from '@/app/components/common/Pagination';
 import AlertDialog from '@/app/components/common/AlertDialog';
 import Toast from '@/app/components/common/Toast';
 import { exportToCSV, parseCSVFile } from '@/app/lib/common/csv';
-import { getUsersAction, deleteUsersAction, importUsersAction } from '@/app/lib/user-actions';
+import { getPostsAction, deletePostsAction, importPostsAction } from '@/app/lib/post-actions';
 import { formatDate } from '@/lib/date-utils';
 
-export default function UserManagement() {
-    const [users, setUsers] = useState<User[]>([]);
+export default function PostManagement() {
+    const [posts, setPosts] = useState<Post[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+    const [selectedPosts, setSelectedPosts] = useState<string[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userIds?: string[] }>({
+    const [editingPost, setEditingPost] = useState<Post | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; postIds?: string[] }>({
         isOpen: false
     });
     const [pagination, setPagination] = useState<PaginationState>({
         currentPage: 1,
         totalPages: 1,
         pageSize: 10,
-        totalUsers: 0
+        totalPosts: 0
     });
     const [isLoading, setIsLoading] = useState(false);
     const [isPending, startTransition] = useTransition();
@@ -39,27 +39,27 @@ export default function UserManagement() {
         setNotification({ show: true, message, type });
     };
 
-    const fetchUsers = useCallback(async () => {
+    const fetchPosts = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await getUsersAction(searchTerm, pagination.currentPage, pagination.pageSize);
+            const data = await getPostsAction(searchTerm, pagination.currentPage, pagination.pageSize);
 
             // Now TypeScript knows the exact structure
-            setUsers(data.users);
+            setPosts(data.posts);
             setPagination({
                 currentPage: data.pagination.currentPage,
                 totalPages: data.pagination.totalPages,
                 pageSize: data.pagination.pageSize,
-                totalUsers: data.pagination.totalUsers,
+                totalPosts: data.pagination.totalPosts,
             });
         } catch (error) {
-            console.error('Error fetching users:', error);
-            showNotification('An unexpected error occurred while fetching users', 'error');
+            console.error('Error fetching posts:', error);
+            showNotification('An unexpected error occurred while fetching posts', 'error');
             // Set empty state on error
-            setUsers([]);
+            setPosts([]);
             setPagination(prev => ({
                 ...prev,
-                totalUsers: 0,
+                totalPosts: 0,
             }));
         } finally {
             setIsLoading(false);
@@ -67,8 +67,8 @@ export default function UserManagement() {
     }, [searchTerm, pagination.currentPage, pagination.pageSize]);
 
     useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+        fetchPosts();
+    }, [fetchPosts]);
 
     const handleSearch = (value: string) => {
         setSearchTerm(value);
@@ -76,84 +76,85 @@ export default function UserManagement() {
     };
 
     const handleFormSuccess = () => {
-        setEditingUser(null);
-        fetchUsers();
-        showNotification('User saved successfully', 'success');
+        setEditingPost(null);
+        fetchPosts();
+        showNotification('Post saved successfully', 'success');
     };
 
-    const handleDeleteUsers = (userIds: string[]) => {
-        setDeleteConfirm({ isOpen: true, userIds });
+    const handleDeletePosts = (postIds: string[]) => {
+        setDeleteConfirm({ isOpen: true, postIds });
     };
 
     const confirmDelete = async () => {
-        if (deleteConfirm.userIds && deleteConfirm.userIds.length > 0) {
+        if (deleteConfirm.postIds && deleteConfirm.postIds.length > 0) {
             startTransition(async () => {
                 try {
-                    const result = await deleteUsersAction(deleteConfirm.userIds!);
+                    const result = await deletePostsAction(deleteConfirm.postIds!);
                     if (result.success) {
-                        setSelectedUsers(prev => prev.filter(id => !deleteConfirm.userIds!.includes(id)));
-                        const deletedCount = result.data?.deletedCount || deleteConfirm.userIds!.length;
-                        showNotification(`Successfully deleted ${deletedCount} user(s)`, 'success');
-                        fetchUsers();
+                        setSelectedPosts(prev => prev.filter(id => !deleteConfirm.postIds!.includes(id)));
+                        const deletedCount = result.data?.deletedCount || deleteConfirm.postIds!.length;
+                        showNotification(`Successfully deleted ${deletedCount} post(s)`, 'success');
+                        fetchPosts();
                     } else {
-                        showNotification(result.error || 'Failed to delete users', 'error');
+                        showNotification(result.error || 'Failed to delete posts', 'error');
                     }
                 } catch (error) {
-                    console.error('Error deleting users:', error);
-                    showNotification('Failed to delete users', 'error');
+                    console.error('Error deleting posts:', error);
+                    showNotification('Failed to delete posts', 'error');
                 }
             });
         }
-        setDeleteConfirm({ isOpen: false, userIds: undefined });
+        setDeleteConfirm({ isOpen: false, postIds: undefined });
     };
 
     const handleDeleteSelected = () => {
-        if (selectedUsers.length === 0) {
-            showNotification('Please select users to delete', 'info');
+        if (selectedPosts.length === 0) {
+            showNotification('Please select posts to delete', 'info');
             return;
         }
-        handleDeleteUsers(selectedUsers);
+        handleDeletePosts(selectedPosts);
     };
 
-    const handleSelectUser = (userId: string) => {
-        setSelectedUsers(prev =>
-            prev.includes(userId)
-                ? prev.filter(id => id !== userId)
-                : [...prev, userId]
+    const handleSelectPost = (postId: string) => {
+        setSelectedPosts(prev =>
+            prev.includes(postId)
+                ? prev.filter(id => id !== postId)
+                : [...prev, postId]
         );
     };
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedUsers(users.map(user => user.id));
+            setSelectedPosts(posts.map(post => post.id));
         } else {
-            setSelectedUsers([]);
+            setSelectedPosts([]);
         }
     };
 
     const handleExportCSV = () => {
-        const usersToExport = selectedUsers.length > 0
-            ? users.filter(user => selectedUsers.includes(user.id))
-            : users;
+        const postsToExport = selectedPosts.length > 0
+            ? posts.filter(post => selectedPosts.includes(post.id))
+            : posts;
 
-        if (usersToExport.length === 0) {
-            showNotification('No users to export', 'info');
+        if (postsToExport.length === 0) {
+            showNotification('No posts to export', 'info');
             return;
         }
-        usersToExport.forEach(user => {
-            user.createdAt = formatDate(new Date(user.createdAt));
+
+        postsToExport.forEach(post => {
+            post.createdAt = formatDate(new Date(post.createdAt));
         });
         exportToCSV({
-            data: usersToExport,
-            filename: `users_${new Date().toISOString()}_${Math.floor(Math.random() * 1000)}.csv`,
+            data: postsToExport,
+            filename: `posts_${new Date().toISOString()}_${Math.floor(Math.random() * 1000)}.csv`,
             headers: {
                 id: 'ID',
-                name: 'Name',
-                email: 'Email',
+                title: 'Title',
+                content: 'Content',
                 createdAt: 'Created At',
             }
         });
-        showNotification(`Exported ${usersToExport.length} user(s) to CSV`, 'success');
+        showNotification(`Exported ${postsToExport.length} post(s) to CSV`, 'success');
     };
 
     const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,39 +162,40 @@ export default function UserManagement() {
         if (!file) return;
 
         try {
-            const importedUsers = await parseCSVFile<UserFormData>(file, {
+            const importedPosts = await parseCSVFile<PostFormData>(file, {
                 mapping: {
-                    'Name': 'name',
-                    'Email': 'email',
+                    'Title': 'title',
+                    'Content': 'content',
                 },
                 transform: (row) => ({
-                    name: (row.name || row.Name || '').trim(),
-                    email: (row.email || row.Email || '').trim(),
+                    title: (row.title || row.Title || '').trim(),
+                    content: (row.content || row.Content || '').trim(),
+                    comments: [], // Default empty comments
                 }),
-                validate: (user) => {
-                    return !!(user.name && user.email && user.email.includes('@'));
+                validate: (post) => {
+                    return !!(post.title.length >= 5 && post.title.length <= 200 && post.content.length > 0)
                 }
             });
-            if (importedUsers.length === 0) {
-                showNotification('No valid users found in CSV file', 'error');
+            if (importedPosts.length === 0) {
+                showNotification('No valid posts found in CSV file', 'error');
                 event.target.value = '';
                 return;
             }
 
             startTransition(async () => {
                 try {
-                    const result = await importUsersAction(importedUsers);
+                    const result = await importPostsAction(importedPosts);
                     if (result.success) {
                         const message = result.data?.partialError ||
-                            `Successfully imported ${result.data?.count || importedUsers.length} user(s)`;
+                            `Successfully imported ${result.data?.count || importedPosts.length} post(s)`;
                         showNotification(message, result.data?.partialError ? 'info' : 'success');
-                        fetchUsers();
+                        fetchPosts();
                     } else {
-                        showNotification(result.error || 'Failed to import users', 'error');
+                        showNotification(result.error || 'Failed to import posts', 'error');
                     }
                 } catch (error) {
-                    console.error('Error importing users:', error);
-                    showNotification('Failed to import users', 'error');
+                    console.error('Error importing posts:', error);
+                    showNotification('Failed to import posts', 'error');
                 }
             });
         } catch (error) {
@@ -213,10 +215,10 @@ export default function UserManagement() {
             <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
                 <div style={{ marginBottom: '2rem' }}>
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
-                        Users List
+                        Posts List
                     </h1>
                     <p style={{ color: '#6b7280' }}>
-                        Manage your users with ease
+                        Manage your posts with ease
                     </p>
                 </div>
 
@@ -239,7 +241,7 @@ export default function UserManagement() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                             <button
                                 onClick={() => {
-                                    setEditingUser(null);
+                                    setEditingPost(null);
                                     setIsFormOpen(true);
                                 }}
                                 style={{
@@ -259,12 +261,12 @@ export default function UserManagement() {
                                 <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
-                                Create User
+                                Create Post
                             </button>
 
                             <button
                                 onClick={handleDeleteSelected}
-                                disabled={selectedUsers.length === 0 || isPending}
+                                disabled={selectedPosts.length === 0 || isPending}
                                 style={{
                                     padding: '0.5rem 1rem',
                                     backgroundColor: '#dc2626',
@@ -272,8 +274,8 @@ export default function UserManagement() {
                                     border: 'none',
                                     borderRadius: '0.5rem',
                                     fontWeight: 500,
-                                    cursor: selectedUsers.length === 0 ? 'not-allowed' : 'pointer',
-                                    opacity: selectedUsers.length === 0 ? 0.5 : 1,
+                                    cursor: selectedPosts.length === 0 ? 'not-allowed' : 'pointer',
+                                    opacity: selectedPosts.length === 0 ? 0.5 : 1,
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.5rem',
@@ -283,7 +285,7 @@ export default function UserManagement() {
                                 <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                                Delete Selected {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+                                Delete Selected {selectedPosts.length > 0 && `(${selectedPosts.length})`}
                             </button>
 
                             <button
@@ -357,16 +359,16 @@ export default function UserManagement() {
                                 }} />
                             </div>
                         )}
-                        <UserTable
-                            users={users}
-                            selectedUsers={selectedUsers}
-                            onSelectUser={handleSelectUser}
+                        <PostTable
+                            posts={posts}
+                            selectedPosts={selectedPosts}
+                            onSelectPost={handleSelectPost}
                             onSelectAll={handleSelectAll}
-                            onEditUser={(user) => {
-                                setEditingUser(user);
+                            onEditPost={(post) => {
+                                setEditingPost(post);
                                 setIsFormOpen(true);
                             }}
-                            onDeleteUser={(userId) => handleDeleteUsers([userId])}
+                            onDeletePost={(postId) => handleDeletePosts([postId])}
                         />
                     </div>
 
@@ -379,7 +381,7 @@ export default function UserManagement() {
                         gap: '1rem'
                     }}>
                         <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                            Total Records: {pagination.totalUsers}
+                            Total Records: {pagination.totalPosts}
                         </div>
                         <Pagination
                             currentPage={pagination.currentPage}
@@ -390,21 +392,21 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            <UserForm
+            <PostForm
                 isOpen={isFormOpen}
                 onClose={() => {
                     setIsFormOpen(false);
-                    setEditingUser(null);
+                    setEditingPost(null);
                 }}
-                user={editingUser}
+                post={editingPost}
                 onSuccess={handleFormSuccess}
             />
 
             <AlertDialog
                 isOpen={deleteConfirm.isOpen}
-                message={`Are you sure you want to delete ${deleteConfirm.userIds?.length || 0} user(s)? This action cannot be undone.`}
+                message={`Are you sure you want to delete ${deleteConfirm.postIds?.length || 0} post(s)? This action cannot be undone.`}
                 onConfirm={confirmDelete}
-                onCancel={() => setDeleteConfirm({ isOpen: false, userIds: undefined })}
+                onCancel={() => setDeleteConfirm({ isOpen: false, postIds: undefined })}
                 loading={isPending}
             />
 
