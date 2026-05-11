@@ -31,16 +31,16 @@ export default function PostForm({ isOpen, onClose, post, onSuccess, onSubmit }:
 
         if (!formData.title.trim()) {
             newErrors.title = 'Title is required';
-        } else if (formData.title.trim().length < 2) {
+        } else if (formData.title.trim().length < 5) {
             newErrors.title = 'Title must be at least 5 characters';
-        } else if (formData.title.trim().length > 50) {
+        } else if (formData.title.trim().length > 200) {
             newErrors.title = 'Title must be less than 200 characters';
         }
 
         if (!formData.content.trim()) {
             newErrors.content = 'Content is required';
-        } else if (formData.content.trim().length < 5) {
-            newErrors.content = 'Please enter a valid content';
+        } else if (formData.content.trim().length < 10) {
+            newErrors.content = 'Content must be at least 10 characters';
         }
 
         setErrors(newErrors);
