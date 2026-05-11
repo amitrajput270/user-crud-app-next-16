@@ -109,17 +109,17 @@ export async function createPostAction(data: PostFormData): Promise<ActionRespon
         await dbConnect();
 
         // Validate data before creating
-        if (!data.title || data.title.trim().length < 2) {
+        if (!data.title || data.title.trim().length < 5) {
             return {
                 success: false,
-                error: 'Name must be at least 2 characters'
+                error: 'Name must be at least 5 characters'
             };
         }
 
         if (!data.content) {
             return {
                 success: false,
-                error: 'Please enter a valid content'
+                error: 'Please enter a valid content must be at least 10 characters'
             };
         }
 
@@ -154,17 +154,17 @@ export async function updatePostAction(id: string, data: PostFormData): Promise<
         await dbConnect();
 
         // Validate data before updating
-        if (!data.title || data.title.trim().length < 2) {
+        if (!data.title || data.title.trim().length < 5) {
             return {
                 success: false,
-                error: 'Name must be at least 2 characters'
+                error: 'Name must be at least 5 characters'
             };
         }
 
         if (!data.content) {
             return {
                 success: false,
-                error: 'Please enter a valid content address'
+                error: 'Please enter a valid content must be at least 10 characters'
             };
         }
 
